@@ -1,0 +1,30 @@
+{
+	on_demand_tls {
+		ask http://localhost:80/ask
+	}
+}
+
+:80 {
+	route {
+		tls_gatekeeper /ask {
+			database_url {$DATABASE_URL}
+		}
+
+		domain_resolver {
+			database_url {$DATABASE_URL}
+			cache_ttl 5m
+		}
+	}
+}
+
+:443 {
+	tls {
+		on_demand
+	}
+	route {
+		domain_resolver {
+			database_url {$DATABASE_URL}
+			cache_ttl 5m
+		}
+	}
+}

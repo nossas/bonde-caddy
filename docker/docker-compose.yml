@@ -1,0 +1,58 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-static
+    volumes:
+      - ../html/app1:/usr/share/nginx/html:ro
+    networks:
+      - caddy-net
+
+  nginx-site2:
+    image: nginx:alpine
+    container_name: nginx-site2
+    volumes:
+      - ../html/app2:/usr/share/nginx/html:ro
+    networks:
+      - caddy-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: caddy_proxy
+      POSTGRES_USER: caddy
+      POSTGRES_PASSWORD: caddy123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ../config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - caddy-net
+
+  caddy-dev:
+    image: golang:1.23-alpine
+    container_name: caddy-dev
+    working_dir: /app
+    command: sh -c "go run cmd/bonde-caddy/main.go run --config /etc/caddy/Caddyfile"
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DATABASE_URL: "postgres://caddy:caddy123@postgres:5432/caddy_proxy?sslmode=disable"
+    volumes:
+      - ..:/app                                              # Monta a raiz do projeto
+      - ../config/Caddyfile:/etc/caddy/Caddyfile:ro          # Caddyfile
+      - caddy_data:/root/.local/share/caddy                  # Dados do Caddy
+    depends_on:
+      - nginx
+      - nginx-site2
+      - postgres
+    networks:
+      - caddy-net
+
+volumes:
+  caddy_data:
+
+networks:
+  caddy-net:
+    driver: bridge
